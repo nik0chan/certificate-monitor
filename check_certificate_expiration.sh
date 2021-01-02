@@ -84,8 +84,7 @@ check_fqdn(){
 
 start_server() {
   while true; do
-    echo -e "HTTP/1.1 200 OK\r\n $(cat /tmp/REPORT)" |
-    nc -lp 1024 -q 1
+    cat /tmp/index.http | nc -lp 8000; 
     sleep 1
   done
 }
@@ -99,15 +98,19 @@ if [ -z $URL ] && [ -z $FILE ]; then
   exit 1
 fi
 
-OUTPUT="/tmp/REPORT"
+OUTPUT="/tmp/index.http"
 echo "" > $OUTPUT 
 
 if [ $REPORT ]; then
   [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Generating report header on $REPORT  ${reset}"
   echo  > $REPORT
-  echo "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">
-     <html xmlns=3D=\"http://www.w3.org/1999/xhtml\">
-     <head>
+  echo "HTTP/1.1 200 OK
+        Content-Type: text/html; charset=UTF-8
+        Server: netcat!
+
+        <!doctype html>
+        <html>
+        <head>
          <style>
              TABLE {border-width: 1px;border-style: solid;border-color: black;border-collapse: collapse;}
              TR:Hover TD {Background-Color: #C1D5F8;}
@@ -116,10 +119,10 @@ if [ $REPORT ]; then
              .odd  { background-color:#ffffff; }
              .even { background-color:#dddddd; }
          </style>
-      <title>
+        <title>
            Domain certificate status
-      </title>
-    </head>" > $REPORT
+        </title>
+        </head>" > $REPORT
 fi
 
 if [ -r "$FILE" ]; then
