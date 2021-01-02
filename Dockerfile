@@ -13,4 +13,6 @@ RUN wget https://raw.githubusercontent.com/nik0chan/certificate-monitor/main/che
     wget https://raw.githubusercontent.com/nik0chan/certificate-monitor/main/html.awk -O /root/html.awk && \
     chmod +x /usr/local/bin/check_certificate_expiration.sh
 
+EXPOSE 80
+
 ENTRYPOINT ["/usr/local/bin/check_certificate_expiration.sh"]

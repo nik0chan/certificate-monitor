@@ -85,7 +85,7 @@ check_fqdn(){
 start_server() {
   while true; do
     echo -e "HTTP/1.1 200 OK\r\n $(cat /tmp/REPORT)" |
-    nc -lp 80 -q 1
+    nc -lp 1024 -q 1
     sleep 1
   done
 }
@@ -99,10 +99,14 @@ if [ -z $URL ] && [ -z $FILE ]; then
   exit 1
 fi
 
+OUTPUT="/tmp/REPORT"
+echo "" > $OUTPUT 
+
 if [ $REPORT ]; then
+  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Generating report header on $REPORT  ${reset}"
   echo  > $REPORT
-  echo "<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-     <html xmlns=3D="http://www.w3.org/1999/xhtml">
+  echo "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">
+     <html xmlns=3D=\"http://www.w3.org/1999/xhtml\">
      <head>
          <style>
              TABLE {border-width: 1px;border-style: solid;border-color: black;border-collapse: collapse;}
@@ -118,9 +122,6 @@ if [ $REPORT ]; then
     </head>" > $REPORT
 fi
 
-OUTPUT="/tmp/REPORT"
-
-echo "" >  $OUTPUT
 if [ -r "$FILE" ]; then
  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Checking file ${reset}"
  for i in `cat $FILE` ; do
@@ -135,6 +136,6 @@ if [ ! -z $REPORT ]; then
    echo "</html>" >> $REPORT
 fi
 
-if [ $DAEMON ]; then 
-  start_daemon 
-fi
+#if [ $DAEMON ]; then 
+  start_server 
+#fi
