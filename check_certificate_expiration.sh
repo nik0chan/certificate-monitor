@@ -30,7 +30,7 @@ AWKCONFIG="./html.awk"
 
 # PARAMETERS LOAD
 
-while getopts :vu:f:s:r: option; do
+while getopts :vu:f:s:r:d: option; do
   case $option in
     v) VERBOSE=1
       ;;
@@ -45,6 +45,9 @@ while getopts :vu:f:s:r: option; do
       ;;
     r) REPORT=$OPTARG
 	[[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} REPORTS specified $REPORT ${reset}"
+      ;;
+    d) DAEMON=$OPTARG
+  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Daemon mode specified $DAEMON ${reset}"
       ;;
   esac
 done
@@ -79,6 +82,14 @@ check_fqdn(){
   echo ${reset}
 }
 
+start_server() {
+  while true; do
+    echo -e "HTTP/1.1 200 OK\r\n $(cat /tmp/REPORT)" |
+    nc -lp 80 -q 1
+    sleep 1
+  done
+}
+
 # // Main
 
 if [ -z $URL ] && [ -z $FILE ]; then
@@ -108,6 +119,7 @@ if [ $REPORT ]; then
 fi
 
 OUTPUT="/tmp/REPORT"
+
 echo "" >  $OUTPUT
 if [ -r "$FILE" ]; then
  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Checking file ${reset}"
@@ -123,16 +135,6 @@ if [ ! -z $REPORT ]; then
    echo "</html>" >> $REPORT
 fi
 
-#(
-#    echo "From: noreply@reus.cat"
-#    echo "Subject: Check certificate expiraion status"
-#    echo "Content-type: text/html"
-#    echo
-#    echo $(cat $REPORT)
-#) | sendmail nmantilla@reus.cat
-
-
-# Revisar:
-# https://unix.stackexchange.com/questions/423075/checking-whether-a-date-is-within-the-next-week
-# https://badssl.com/ <- Ideal para probar certificados
-
+if [ $DAEMON ]; then 
+  start_daemon 
+fi
