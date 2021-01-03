@@ -133,5 +133,10 @@ if [ ! -z $REPORT ]; then
 fi
 
 if [ $DAEMON ]; then 
-  while [ 1 ];do nc -l -p 8080 -c 'echo -e "HTTP/1.1 200 OK\n";cat $REPORT'; done
+  echo "HTTP/1.1 200 OK\n\n" > /tmp/index.html 
+  cat $REPORT >> /tmp/index.html
+  nc -l -p 8080 < /tmp/index.html 
+  #while [ 1 ]; do 
+  #   cat /tmp/index.html 
+  #done
 fi
