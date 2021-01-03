@@ -6,7 +6,7 @@
 #
 # Sintaxis:
 #
-# check_certificate_expiration.sh [-v] { -u URL | -f FILE_WITH_URLS } [-s EMAIL_TO] [ -r REPORT_FILE ]
+# check_certificate_expiration.sh [-v] { -u URL | -f FILE_WITH_URLS } [-m EMAIL_TO] [ -r REPORT_FILE ]
 # If -s and -r are specified report is sent on HTML format otherwise if -s is only specified report is sent in text format.
 #
 # Must be defined:
@@ -30,25 +30,27 @@ AWKCONFIG="./html.awk"
 
 # PARAMETERS LOAD
 
-while getopts :vu:f:s:r:d: option; do
+while getopts :vsu:f:m:r: option; do
   case $option in
     v) VERBOSE=1
+      [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} VERBOSE mode ON ${reset}"
       ;;
     u) URL=$OPTARG
-	[[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} URL: specified $URL ${reset}"
+      [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} URL: specified $URL ${reset}"
       ;;
     f) FILE=$OPTARG
-	[[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} FILE specified $FILE ${reset}"
+      [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} FILE specified $FILE ${reset}"
       ;;
-    s) ADDRESS=$OPTARG
-	[[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Destination ADDRESS specified $ADDRESS ${reset}"
+    m) ADDRESS=$OPTARG
+      [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Destination ADDRESS specified $ADDRESS ${reset}"
       ;;
     r) REPORT=$OPTARG
-	[[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} REPORTS specified $REPORT ${reset}"
+      [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} REPORTS specified $REPORT ${reset}"
       ;;
-    d) DAEMON=$OPTARG
-  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Daemon mode specified $DAEMON ${reset}"
-      ;;
+    s) DAEMON=1
+       REPORT=/tmp/report.html
+      [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} DAEMON mode ON ${reset}"
+      ;;      
   esac
 done
 
@@ -133,10 +135,14 @@ if [ ! -z $REPORT ]; then
 fi
 
 if [ $DAEMON ]; then 
-  echo "HTTP/1.1 200 OK\n\n" > /tmp/index.html 
+  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Starting daemon ${reset}"	
+  echo "HTTP/1.1 200 OK
+
+         " > /tmp/index.html 
   cat $REPORT >> /tmp/index.html
-  nc -l -p 8080 < /tmp/index.html 
-  #while [ 1 ]; do 
+  
+  while [ 1 ]; do
+    nc -l -p 8080 < /tmp/index.html   
   #   cat /tmp/index.html 
-  #done
+  done
 fi
