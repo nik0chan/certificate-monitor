@@ -14,7 +14,7 @@
 # -v: VERBOSE
 # -u: URL
 # -f: FILE WITH URL
-# -s SEND ADDRESS
+# -m SEND ADDRESS
 # -r GENERATE REPORT (HTML FORMAT)
 # -
 
@@ -55,38 +55,8 @@ while getopts :vsu:f:m:r: option; do
 done
 
 # // Function
-check_fqdn(){
-  echo "${cyan}Checking domain ${green} $1"
-  getent hosts $1 > /dev/null
-  case $? in
-    0)  EXPDATE=$(echo | openssl s_client -servername $1 -connect $1:443 2>/dev/null | openssl x509 -noout -enddate)
-  	EXPDATE=$(echo $EXPDATE | cut -d'=' -f2)
-  	ENDDATE=$(date -d "$EXPDATE" +%s)
-  	TODAY=$(date +%s)
-
-  	if [ "$TODAY" -ge "$ENDDATE" ]; then
-   	  echo "${yellow}EXPIRED!!!!";
-   	  echo "${reset}CERTIFICATE IS EXPIRED! ${red} Expiration date: $EXPDATE"
-   	[[ $REPORT ]] && echo "$1 -> <font color="red">EXPIRED!!!</font> $EXPDATE" >> $OUTPUT
-  	else
-   	  echo "${reset} Expiration date: $EXPDATE"
-   	  [[ $REPORT ]] && echo "$1 -> <font color="black"> $EXPDATE </font>" >> $OUTPUT
-  	fi
-	;;
-    2)  echo "${yellow}UNKNOWN DOMAIN $1!!!!"
-	[[ $REPORT ]] && echo "$1 -> <font color="red">UNKOWN DOMAIN!!!</font>" >> $OUTPUT
-        ;;
-    *)  echo "${yellow}UNKNOWN DNS ERROR $1!!!!"
-        [[ $REPORT ]] && echo "$1 -> <font color="red">UNKNOWN DNS ERROR!!!</font>" >> $OUTPUT
-        ;;
-  esac
-  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Resolved domains: $(getent hosts $1)"
-  echo ${reset}
-}
-
 generate_report_header() {
  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Generating report header on $REPORT  ${reset}"
-   echo  > $REPORT
    echo "<!doctype html>
          <html>
          <head>
@@ -104,6 +74,35 @@ generate_report_header() {
          </head>" > $REPORT
 }
 
+check_fqdn(){
+  echo "${cyan}Checking domain ${green} $1"
+  getent hosts $1 > /dev/null
+  case $? in
+    0)  EXPDATE=$(echo | openssl s_client -servername $1 -connect $1:443 2>/dev/null | openssl x509 -noout -enddate)
+  	    EXPDATE=$(echo $EXPDATE | cut -d'=' -f2)
+  	    ENDDATE=$(date -d "$EXPDATE" +%s)
+  	    TODAY=$(date +%s)
+
+  	    if [ "$TODAY" -ge "$ENDDATE" ]; then
+   	      echo "${yellow}EXPIRED!!!!";
+   	      echo "${reset}CERTIFICATE IS EXPIRED! ${red} Expiration date: $EXPDATE"
+   	      [[ $REPORT ]] && echo "$1 -> <font color="red">EXPIRED!!!</font> $EXPDATE" >> $OUTPUT
+  	    else
+   	      echo "${reset} Expiration date: $EXPDATE"
+   	      [[ $REPORT ]] && echo "$1 -> <font color="black"> $EXPDATE </font>" >> $OUTPUT
+  	    fi
+	      ;;
+    2)  echo "${yellow}UNKNOWN DOMAIN $1!!!!"
+	      [[ $REPORT ]] && echo "$1 -> <font color="red">UNKOWN DOMAIN!!!</font>" >> $OUTPUT
+        ;;
+    *)  echo "${yellow}UNKNOWN DNS ERROR $1!!!!"
+        [[ $REPORT ]] && echo "$1 -> <font color="red">UNKNOWN DNS ERROR!!!</font>" >> $OUTPUT
+        ;;
+  esac
+        [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Resolved domains: $(getent hosts $1)"
+        echo ${reset}
+}
+
 # // Main
 
 if [ -z $URL ] && [ -z $FILE ]; then
@@ -113,36 +112,38 @@ if [ -z $URL ] && [ -z $FILE ]; then
   exit 1
 fi
 
-OUTPUT=/tmp/index.html
-echo "" > /tmp/index.html
-
 if [ $REPORT ] || [ $DAEMON ]; then
+  OUTPUT="/tmp/tempfile"
+  echo "" > $OUTPUT
   generate_report_header
 fi
 
 if [ -r "$FILE" ]; then
- [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Checking file ${reset}"
- for i in `cat $FILE` ; do
-  check_fqdn $i
- done
- else
-  check_fqdn $URL
+  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Checking URLs on file $FILE ${reset}"
+  for i in `cat $FILE` ; do
+    check_fqdn $i
+  done
+  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} All domains checked ${reset}"
+  else
+    check_fqdn $URL 
 fi
 
-if [ ! -z $REPORT ]; then
+if [ ! -z $REPORT ]; then   # HTML Report formatting 
+   [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} formatting $REPORT file ${reset}"
    awk -f $AWKCONFIG $OUTPUT >> $REPORT
    echo "</html>" >> $REPORT
+   [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} $REPORT created ${reset}"
 fi
 
 if [ $DAEMON ]; then 
   [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Starting daemon ${reset}"	
   echo "HTTP/1.1 200 OK
 
-         " > /tmp/index.html 
-  cat $REPORT >> /tmp/index.html
-  
+        " > /tmp/tempfile
+  cat $REPORT >> /tmp/tempfile
+  mv /tmp/tempfile $REPORT
+
   while [ 1 ]; do
-    nc -l -p 8080 < /tmp/index.html   
-  #   cat /tmp/index.html 
+    nc -l -p 8080 < $REPORT   
   done
 fi
