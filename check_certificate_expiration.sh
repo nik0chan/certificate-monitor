@@ -82,11 +82,24 @@ check_fqdn(){
   echo ${reset}
 }
 
-start_server() {
-  while true; do
-    cat /tmp/index.http | nc -lp 8000; 
-    sleep 1
-  done
+generate_report_header() {
+ [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Generating report header on $REPORT  ${reset}"
+   echo  > $REPORT
+   echo "<!doctype html>
+         <html>
+         <head>
+          <style>
+              TABLE {border-width: 1px;border-style: solid;border-color: black;border-collapse: collapse;}
+              TR:Hover TD {Background-Color: #C1D5F8;}
+              TH {border-width: 1px;padding: 3px;border-style: solid;border-color: black;background-color: #6495ED;}
+              TD {border-width: 1px;padding: 3px;border-style: solid;border-color: black;}
+              .odd  { background-color:#ffffff; }
+              .even { background-color:#dddddd; }
+          </style>
+         <title>
+            Domain certificate status
+         </title>
+         </head>" > $REPORT
 }
 
 # // Main
@@ -98,31 +111,11 @@ if [ -z $URL ] && [ -z $FILE ]; then
   exit 1
 fi
 
-OUTPUT="/tmp/index.http"
-echo "" > $OUTPUT 
+OUTPUT=/tmp/index.html
+echo "" > /tmp/index.html
 
-if [ $REPORT ]; then
-  [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG]${yellow} Generating report header on $REPORT  ${reset}"
-  echo  > $REPORT
-  echo "HTTP/1.1 200 OK
-        Content-Type: text/html; charset=UTF-8
-        Server: netcat!
-
-        <!doctype html>
-        <html>
-        <head>
-         <style>
-             TABLE {border-width: 1px;border-style: solid;border-color: black;border-collapse: collapse;}
-             TR:Hover TD {Background-Color: #C1D5F8;}
-             TH {border-width: 1px;padding: 3px;border-style: solid;border-color: black;background-color: #6495ED;}
-             TD {border-width: 1px;padding: 3px;border-style: solid;border-color: black;}
-             .odd  { background-color:#ffffff; }
-             .even { background-color:#dddddd; }
-         </style>
-        <title>
-           Domain certificate status
-        </title>
-        </head>" > $REPORT
+if [ $REPORT ] || [ $DAEMON ]; then
+  generate_report_header
 fi
 
 if [ -r "$FILE" ]; then
@@ -139,6 +132,6 @@ if [ ! -z $REPORT ]; then
    echo "</html>" >> $REPORT
 fi
 
-#if [ $DAEMON ]; then 
-  start_server 
-#fi
+if [ $DAEMON ]; then 
+  while [ 1 ];do nc -l -p 8080 -c 'echo -e "HTTP/1.1 200 OK\n";cat $REPORT'; done
+fi
