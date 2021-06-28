@@ -13,3 +13,9 @@ cd $HOME
 STILL WORK IN PROGRESS! 
 
 Next release Daemon mode
+
+Simple mode  
+# You can download from hub.docker.com 
+
+docker pull nik0chan/certificate-monitor
+docker run -it nik0chan/certificate-monitor -u www.google.es 
