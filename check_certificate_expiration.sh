@@ -86,7 +86,7 @@ check_fqdn(){
         [[ -z "$EXPDATE" ]] && echo "${red}[ERROR]${yellow} Timeout reached, Unable to retrieve certificate information on 5 seconds" && return -1
   	ENDDATE=$(date -d "$EXPDATE" +%s)
   	TODAY=$(date +%s)
-
+        
         if [ "$TODAY" -ge "$ENDDATE" ]; then
    	      echo "${yellow}EXPIRED!!!!";
    	      echo "${reset}CERTIFICATE IS EXPIRED! ${red} Expiration date: $EXPDATE"
@@ -96,15 +96,21 @@ check_fqdn(){
    	      [[ $REPORT ]] && echo "$1 -> <font color="black"> $EXPDATE </font>" >> $OUTPUT
   	fi
 	;;
+
     2)  echo "${yellow}UNKNOWN DOMAIN $1!!!!"
 	      [[ $REPORT ]] && echo "$1 -> <font color="red">UNKOWN DOMAIN!!!</font>" >> $OUTPUT
         ;;
+
     *)  echo "${yellow}UNKNOWN DNS ERROR $1!!!!"
         [[ $REPORT ]] && echo "$1 -> <font color="red">UNKNOWN DNS ERROR!!!</font>" >> $OUTPUT
         ;;
+
   esac
         [[ ! -z $VERBOSE ]] && echo "${cyan}[DEBUG] ${green} Resolved domains: $(getent hosts $1)"
         echo ${reset}
+
+
+	[[ ! -z $VERBOSE ]] && echo "ISSUER: $(openssl s_client -servername $1 -connect $1:443 2> /dev/null | openssl x509 -noout -issuer 2> /dev/null)"
 }
 
 # // Main
